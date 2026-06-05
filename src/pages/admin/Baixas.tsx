@@ -2,17 +2,177 @@ import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Bike, CheckCircle2, ClipboardList, Clock, FileText, X } from 'lucide-react'
+import {
+  Bike,
+  CheckCircle2,
+  ClipboardList,
+  Download,
+  FileText,
+  Lock,
+  Play,
+  X,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
-import { Link } from 'react-router-dom'
-import { supabase, getThumbnailUrl } from '../../lib/supabase'
+import { supabase, getSignedUrl, getThumbnailUrl } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { formatData, formatPreco } from '../../lib/helpers'
-import type { Moto, MotoBaixa } from '../../types'
+import {
+  DOC_TIPOS,
+  ETAPA_BADGE_CLASSES,
+  ETAPA_LABELS,
+  formatData,
+  formatPreco,
+  formatTamanho,
+} from '../../lib/helpers'
+import type { BaixaEtapa, Moto, MotoBaixa, MotoDocumento } from '../../types'
 import Spinner from '../../components/ui/Spinner'
 
 type MotoVendida = Moto & { baixa: MotoBaixa | null }
 
+function EtapaBadge({ etapa }: { etapa: BaixaEtapa }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${ETAPA_BADGE_CLASSES[etapa]}`}
+    >
+      {etapa === 'concluida' && <CheckCircle2 className="h-3.5 w-3.5" />}
+      {ETAPA_LABELS[etapa]}
+    </span>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Lista de documentos com download via signed URL (bucket privado)    */
+/* ------------------------------------------------------------------ */
+function DocumentosList({ motoId }: { motoId: string }) {
+  const [docs, setDocs] = useState<MotoDocumento[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase
+      .from('moto_documentos')
+      .select('*')
+      .eq('moto_id', motoId)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setDocs((data as MotoDocumento[]) ?? [])
+        setLoading(false)
+      })
+  }, [motoId])
+
+  async function baixar(doc: MotoDocumento) {
+    try {
+      const url = await getSignedUrl(doc.storage_path)
+      window.open(url, '_blank')
+    } catch {
+      toast.error('Erro ao gerar link do documento')
+    }
+  }
+
+  if (loading) return <p className="text-xs text-muted">Carregando documentos...</p>
+  if (docs.length === 0)
+    return <p className="text-xs text-muted">Nenhum documento anexado.</p>
+
+  return (
+    <ul className="space-y-1.5">
+      {docs.map((doc) => (
+        <li
+          key={doc.id}
+          className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2"
+        >
+          <FileText className="h-4 w-4 shrink-0 text-muted" />
+          <span className="min-w-0 flex-1 truncate text-xs text-text">{doc.nome_arquivo}</span>
+          <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-medium uppercase text-primary-dark">
+            {DOC_TIPOS.find((t) => t.value === doc.tipo)?.label ?? doc.tipo}
+          </span>
+          <span className="hidden text-[10px] text-muted sm:inline">
+            {formatTamanho(doc.tamanho_bytes)}
+          </span>
+          <button
+            onClick={() => baixar(doc)}
+            title="Baixar"
+            className="rounded-lg p-1.5 text-muted hover:bg-bg hover:text-primary"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Modal de visualização (despachante) — dados fixos + documentos      */
+/* ------------------------------------------------------------------ */
+function BaixaViewModal({ moto, onClose }: { moto: MotoVendida; onClose: () => void }) {
+  const baixa = moto.baixa!
+
+  const campos = [
+    { label: 'Nome completo', value: baixa.nome_comprador },
+    { label: 'CPF', value: baixa.cpf },
+    { label: 'Telefone', value: baixa.telefone },
+    { label: 'E-mail', value: baixa.email },
+    { label: 'Endereço', value: baixa.endereco },
+    { label: 'Cidade/UF', value: [baixa.cidade, baixa.uf].filter(Boolean).join(' - ') || null },
+    { label: 'Data da venda', value: baixa.data_venda ? formatData(baixa.data_venda) : null },
+    { label: 'Valor da venda', value: baixa.valor_venda ? formatPreco(baixa.valor_venda) : null },
+  ]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-surface p-6 shadow-xl">
+        <div className="mb-1 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-text">Dados da baixa</h3>
+          <button onClick={onClose}>
+            <X className="h-5 w-5 text-muted" />
+          </button>
+        </div>
+        <div className="mb-4 flex items-center gap-2">
+          <p className="text-sm text-muted">
+            {moto.marca} {moto.modelo} {moto.ano_fab}/{moto.ano_mod}
+            {moto.placa && ` · Placa ${moto.placa}`}
+            {moto.chassi && ` · Chassi ${moto.chassi}`}
+          </p>
+          <EtapaBadge etapa={baixa.etapa} />
+        </div>
+
+        <div className="rounded-lg bg-bg p-4">
+          <p className="mb-3 text-sm font-semibold text-text">Novo proprietário</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {campos.map(({ label, value }) => (
+              <div key={label}>
+                <p className="text-[11px] text-muted">{label}</p>
+                <p className="text-sm font-medium text-text">{value || '—'}</p>
+              </div>
+            ))}
+          </div>
+          {baixa.observacoes && (
+            <div className="mt-3 border-t border-border pt-3">
+              <p className="text-[11px] text-muted">Observações</p>
+              <p className="whitespace-pre-line text-sm text-text">{baixa.observacoes}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 rounded-lg bg-bg p-4">
+          <p className="mb-3 text-sm font-semibold text-text">Documentos</p>
+          <DocumentosList motoId={moto.id} />
+        </div>
+
+        <div className="mt-5 flex justify-end">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text hover:bg-bg"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Modal de edição (admin)                                             */
+/* ------------------------------------------------------------------ */
 const baixaSchema = z.object({
   nome_comprador: z.string().min(3, 'Informe o nome do comprador'),
   cpf: z.string().optional(),
@@ -24,13 +184,13 @@ const baixaSchema = z.object({
   data_venda: z.string().optional(),
   valor_venda: z.coerce.number().positive().optional().or(z.literal('')),
   observacoes: z.string().optional(),
-  baixa_concluida: z.boolean(),
+  etapa: z.enum(['nova', 'em_andamento', 'concluida']),
 })
 
 type BaixaInput = z.input<typeof baixaSchema>
 type BaixaValues = z.output<typeof baixaSchema>
 
-function BaixaModal({
+function BaixaEditModal({
   moto,
   onClose,
   onSaved,
@@ -59,7 +219,7 @@ function BaixaModal({
       data_venda: baixa?.data_venda ?? new Date().toISOString().slice(0, 10),
       valor_venda: baixa?.valor_venda ?? moto.preco,
       observacoes: baixa?.observacoes ?? '',
-      baixa_concluida: baixa?.baixa_concluida ?? false,
+      etapa: baixa?.etapa ?? 'nova',
     },
   })
 
@@ -76,8 +236,10 @@ function BaixaModal({
       data_venda: values.data_venda || null,
       valor_venda: values.valor_venda === '' ? null : values.valor_venda,
       observacoes: values.observacoes || null,
-      baixa_concluida: values.baixa_concluida,
-      created_by: user?.id ?? null,
+      etapa: values.etapa,
+      baixa_concluida: values.etapa === 'concluida',
+      concluido_em: values.etapa === 'concluida' ? new Date().toISOString() : null,
+      created_by: baixa?.created_by ?? user?.id ?? null,
     }
 
     const { data, error } = await supabase
@@ -90,7 +252,7 @@ function BaixaModal({
     } else if (!data || data.length === 0) {
       toast.error('Sem permissão para salvar (verifique seu perfil de acesso)')
     } else {
-      toast.success('Baixa registrada!')
+      toast.success('Baixa salva!')
       onSaved()
       onClose()
     }
@@ -104,7 +266,7 @@ function BaixaModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-surface p-6 shadow-xl">
         <div className="mb-1 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text">Baixa do veículo</h3>
+          <h3 className="text-lg font-semibold text-text">Editar baixa</h3>
           <button onClick={onClose}>
             <X className="h-5 w-5 text-muted" />
           </button>
@@ -112,12 +274,11 @@ function BaixaModal({
         <p className="mb-5 text-sm text-muted">
           {moto.marca} {moto.modelo} {moto.ano_fab}/{moto.ano_mod}
           {moto.placa && ` · Placa ${moto.placa}`}
-          {moto.chassi && ` · Chassi ${moto.chassi}`}
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="rounded-lg bg-bg p-4">
-            <p className="mb-3 text-sm font-semibold text-text">Dados do novo dono</p>
+            <p className="mb-3 text-sm font-semibold text-text">Dados do novo proprietário</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className={labelClass}>Nome completo *</label>
@@ -128,11 +289,11 @@ function BaixaModal({
               </div>
               <div>
                 <label className={labelClass}>CPF</label>
-                <input {...register('cpf')} className={inputClass} placeholder="000.000.000-00" />
+                <input {...register('cpf')} className={inputClass} />
               </div>
               <div>
                 <label className={labelClass}>Telefone</label>
-                <input {...register('telefone')} className={inputClass} placeholder="(11) 99999-9999" />
+                <input {...register('telefone')} className={inputClass} />
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass}>E-mail</label>
@@ -151,39 +312,41 @@ function BaixaModal({
               </div>
               <div>
                 <label className={labelClass}>UF</label>
-                <input {...register('uf')} className={inputClass} maxLength={2} placeholder="SP" />
-                {errors.uf && <p className="mt-1 text-xs text-red-600">{errors.uf.message}</p>}
+                <input {...register('uf')} className={inputClass} maxLength={2} />
               </div>
             </div>
           </div>
 
           <div className="rounded-lg bg-bg p-4">
-            <p className="mb-3 text-sm font-semibold text-text">Dados da venda</p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <p className="mb-3 text-sm font-semibold text-text">Venda e etapa</p>
+            <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <label className={labelClass}>Data da venda</label>
                 <input type="date" {...register('data_venda')} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>Valor da venda (R$)</label>
+                <label className={labelClass}>Valor (R$)</label>
                 <input type="number" step="0.01" {...register('valor_venda')} className={inputClass} />
               </div>
-              <div className="sm:col-span-2">
+              <div>
+                <label className={labelClass}>Etapa</label>
+                <select {...register('etapa')} className={inputClass}>
+                  <option value="nova">Nova para baixa</option>
+                  <option value="em_andamento">Em andamento</option>
+                  <option value="concluida">Concluída</option>
+                </select>
+              </div>
+              <div className="sm:col-span-3">
                 <label className={labelClass}>Observações</label>
-                <textarea
-                  {...register('observacoes')}
-                  rows={3}
-                  className={inputClass}
-                  placeholder="Forma de pagamento, pendências, detalhes da transferência..."
-                />
+                <textarea {...register('observacoes')} rows={2} className={inputClass} />
               </div>
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm font-medium text-text">
-            <input type="checkbox" {...register('baixa_concluida')} className="h-4 w-4 accent-primary" />
-            Baixa concluída (documentação transferida para o novo dono)
-          </label>
+          <div className="rounded-lg bg-bg p-4">
+            <p className="mb-3 text-sm font-semibold text-text">Documentos</p>
+            <DocumentosList motoId={moto.id} />
+          </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <button
@@ -207,10 +370,17 @@ function BaixaModal({
   )
 }
 
+/* ------------------------------------------------------------------ */
+/* Página                                                              */
+/* ------------------------------------------------------------------ */
 export default function Baixas() {
+  const { user, perfil } = useAuth()
+  const isAdmin = perfil?.papel === 'admin'
+
   const [motos, setMotos] = useState<MotoVendida[]>([])
   const [loading, setLoading] = useState(true)
-  const [selecionada, setSelecionada] = useState<MotoVendida | null>(null)
+  const [editando, setEditando] = useState<MotoVendida | null>(null)
+  const [vendo, setVendo] = useState<MotoVendida | null>(null)
 
   const fetchVendidas = useCallback(async () => {
     const { data, error } = await supabase
@@ -235,20 +405,48 @@ export default function Baixas() {
     fetchVendidas()
   }, [fetchVendidas])
 
+  async function mudarEtapa(baixa: MotoBaixa, etapa: BaixaEtapa) {
+    const patch: Record<string, unknown> = { etapa }
+    if (etapa === 'em_andamento') {
+      patch.iniciado_por = user?.id ?? null
+      patch.iniciado_em = new Date().toISOString()
+    }
+    if (etapa === 'concluida') {
+      patch.baixa_concluida = true
+      patch.concluido_em = new Date().toISOString()
+    }
+
+    const { data, error } = await supabase
+      .from('moto_baixas')
+      .update(patch)
+      .eq('id', baixa.id)
+      .select('id')
+
+    if (error) {
+      toast.error(`Erro: ${error.message}`)
+    } else if (!data || data.length === 0) {
+      toast.error('Sem permissão (verifique seu perfil de acesso)')
+    } else {
+      toast.success(
+        etapa === 'em_andamento' ? 'Processo iniciado! Dados liberados.' : 'Baixa concluída! 🎉'
+      )
+      fetchVendidas()
+    }
+  }
+
   if (loading) return <Spinner />
 
-  const pendentes = motos.filter((m) => !m.baixa?.baixa_concluida).length
+  const pendentes = motos.filter((m) => m.baixa && m.baixa.etapa !== 'concluida').length
+  const semBaixa = motos.filter((m) => !m.baixa).length
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-text">Baixas de veículos</h1>
-          <p className="text-sm text-muted">
-            Motos vendidas · {pendentes} baixa{pendentes !== 1 && 's'} pendente
-            {pendentes !== 1 && 's'}
-          </p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-text">Baixas de veículos</h1>
+        <p className="text-sm text-muted">
+          {motos.length} vendida{motos.length !== 1 && 's'} · {pendentes + semBaixa} pendente
+          {pendentes + semBaixa !== 1 && 's'} de conclusão
+        </p>
       </div>
 
       {motos.length === 0 ? (
@@ -259,7 +457,11 @@ export default function Baixas() {
       ) : (
         <div className="space-y-3">
           {motos.map((moto) => {
-            const concluida = !!moto.baixa?.baixa_concluida
+            const baixa = moto.baixa
+            const etapa = baixa?.etapa ?? null
+            // Despachante só vê os dados do dono após iniciar o processo
+            const dadosLiberados = isAdmin || (etapa !== null && etapa !== 'nova')
+
             return (
               <div
                 key={moto.id}
@@ -285,38 +487,72 @@ export default function Baixas() {
                     {moto.placa && `Placa ${moto.placa} · `}
                     {formatPreco(moto.preco)}
                   </p>
-                  {moto.baixa && (
-                    <p className="mt-0.5 truncate text-xs text-muted">
-                      Novo dono: <span className="font-medium">{moto.baixa.nome_comprador}</span>
-                      {moto.baixa.data_venda && ` · venda em ${formatData(moto.baixa.data_venda)}`}
+                  {baixa &&
+                    (dadosLiberados ? (
+                      <p className="mt-0.5 truncate text-xs text-muted">
+                        Novo dono: <span className="font-medium">{baixa.nome_comprador}</span>
+                        {baixa.data_venda && ` · venda em ${formatData(baixa.data_venda)}`}
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
+                        <Lock className="h-3 w-3" /> Dados liberados ao iniciar o processo
+                      </p>
+                    ))}
+                  {!baixa && (
+                    <p className="mt-0.5 text-xs text-amber-600">
+                      Venda sem dados do comprador — registre a baixa
                     </p>
                   )}
                 </div>
 
-                {concluida ? (
-                  <span className="flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Baixa concluída
-                  </span>
+                {etapa ? (
+                  <EtapaBadge etapa={etapa} />
                 ) : (
-                  <span className="flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-                    <Clock className="h-3.5 w-3.5" /> {moto.baixa ? 'Em andamento' : 'Pendente'}
+                  <span className="whitespace-nowrap rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                    Sem dados
                   </span>
                 )}
 
-                <div className="flex gap-2">
-                  <Link
-                    to={`/admin/estoque/${moto.id}/documentos`}
-                    title="Documentos da moto"
-                    className="rounded-lg border border-border p-2 text-muted hover:bg-bg hover:text-primary"
-                  >
-                    <FileText className="h-4 w-4" />
-                  </Link>
-                  <button
-                    onClick={() => setSelecionada(moto)}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
-                  >
-                    {moto.baixa ? 'Editar baixa' : 'Registrar baixa'}
-                  </button>
+                <div className="flex flex-wrap gap-2">
+                  {/* Despachante: iniciar processo → libera os dados */}
+                  {baixa && etapa === 'nova' && (
+                    <button
+                      onClick={() => mudarEtapa(baixa, 'em_andamento')}
+                      className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+                    >
+                      <Play className="h-4 w-4" /> Iniciar processo
+                    </button>
+                  )}
+
+                  {/* Dados liberados: ver dados + documentos */}
+                  {baixa && dadosLiberados && (
+                    <button
+                      onClick={() => setVendo(moto)}
+                      className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text hover:bg-bg"
+                    >
+                      Ver dados
+                    </button>
+                  )}
+
+                  {/* Concluir (em andamento) */}
+                  {baixa && etapa === 'em_andamento' && (
+                    <button
+                      onClick={() => mudarEtapa(baixa, 'concluida')}
+                      className="flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                    >
+                      <CheckCircle2 className="h-4 w-4" /> Concluir
+                    </button>
+                  )}
+
+                  {/* Admin: editar (ou registrar quando vendida sem baixa) */}
+                  {isAdmin && (
+                    <button
+                      onClick={() => setEditando(moto)}
+                      className="rounded-lg border border-primary px-4 py-2 text-sm font-medium text-primary hover:bg-primary-light"
+                    >
+                      {baixa ? 'Editar' : 'Registrar baixa'}
+                    </button>
+                  )}
                 </div>
               </div>
             )
@@ -324,13 +560,14 @@ export default function Baixas() {
         </div>
       )}
 
-      {selecionada && (
-        <BaixaModal
-          moto={selecionada}
-          onClose={() => setSelecionada(null)}
+      {editando && (
+        <BaixaEditModal
+          moto={editando}
+          onClose={() => setEditando(null)}
           onSaved={fetchVendidas}
         />
       )}
+      {vendo && vendo.baixa && <BaixaViewModal moto={vendo} onClose={() => setVendo(null)} />}
     </div>
   )
 }

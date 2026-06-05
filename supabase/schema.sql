@@ -83,7 +83,7 @@ create table moto_fotos (
 create table moto_documentos (
   id uuid primary key default uuid_generate_v4(),
   moto_id uuid references motos(id) on delete cascade,
-  tipo text not null,                  -- dut | crlv | laudo | nf | outro
+  tipo text not null,                  -- atpv | crlv | laudo | nf | cnh | endereco | contrato | outro
   nome_arquivo text not null,
   storage_path text not null,          -- bucket privado: motos-docs
   tamanho_bytes bigint,

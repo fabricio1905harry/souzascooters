@@ -55,7 +55,7 @@ export const COMBUSTIVEIS = [
 ] as const
 
 export const DOC_TIPOS = [
-  { value: 'dut', label: 'DUT' },
+  { value: 'atpv', label: 'ATPV' },
   { value: 'crlv', label: 'CRLV' },
   { value: 'laudo', label: 'Laudo' },
   { value: 'nf', label: 'NF' },

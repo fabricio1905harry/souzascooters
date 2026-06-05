@@ -1,6 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Archive, Bike, FileText, Pencil, Plus, Search, Star } from 'lucide-react'
+import {
+  Archive,
+  Bike,
+  ClipboardList,
+  FileText,
+  HandCoins,
+  Pencil,
+  Plus,
+  Search,
+  Star,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase, getThumbnailUrl } from '../../lib/supabase'
 import { useMotosAdmin } from '../../hooks/useMotos'
@@ -8,6 +18,7 @@ import { formatKm, formatPreco, STATUS_BADGE_CLASSES, STATUS_LABELS } from '../.
 import type { Moto, MotoStatus } from '../../types'
 import Spinner from '../../components/ui/Spinner'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import VenderModal from '../../components/admin/VenderModal'
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
   return (
@@ -33,6 +44,7 @@ export default function Stock() {
   const [busca, setBusca] = useState('')
   const [statusFiltro, setStatusFiltro] = useState<MotoStatus | ''>('')
   const [arquivar, setArquivar] = useState<Moto | null>(null)
+  const [vender, setVender] = useState<Moto | null>(null)
 
   const filtradas = useMemo(() => {
     return motos.filter((m) => {
@@ -200,7 +212,24 @@ export default function Stock() {
                   />
                 </td>
                 <td className="p-3">
-                  <div className="flex justify-end gap-1">
+                  <div className="flex items-center justify-end gap-1">
+                    {moto.status !== 'vendido' ? (
+                      <button
+                        onClick={() => setVender(moto)}
+                        title="Vender — registra o novo dono e envia para o despachante"
+                        className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-dark"
+                      >
+                        <HandCoins className="h-3.5 w-3.5" /> Vender
+                      </button>
+                    ) : (
+                      <Link
+                        to="/admin/baixas"
+                        title="Ver baixa"
+                        className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted hover:bg-bg hover:text-primary"
+                      >
+                        <ClipboardList className="h-3.5 w-3.5" /> Baixa
+                      </Link>
+                    )}
                     <Link
                       to={`/admin/estoque/${moto.id}/editar`}
                       title="Editar"
@@ -229,6 +258,10 @@ export default function Stock() {
           </tbody>
         </table>
       </div>
+
+      {vender && (
+        <VenderModal moto={vender} onClose={() => setVender(null)} onSold={refetch} />
+      )}
 
       <ConfirmDialog
         open={!!arquivar}

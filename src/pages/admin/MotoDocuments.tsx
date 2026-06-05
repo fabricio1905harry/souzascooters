@@ -11,10 +11,13 @@ import Spinner from '../../components/ui/Spinner'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 
 const TIPO_BADGE: Record<DocTipo, string> = {
-  dut: 'bg-blue-100 text-blue-800',
+  atpv: 'bg-blue-100 text-blue-800',
   crlv: 'bg-green-100 text-green-800',
   laudo: 'bg-purple-100 text-purple-800',
   nf: 'bg-amber-100 text-amber-800',
+  cnh: 'bg-cyan-100 text-cyan-800',
+  endereco: 'bg-teal-100 text-teal-800',
+  contrato: 'bg-indigo-100 text-indigo-800',
   outro: 'bg-gray-100 text-gray-600',
 }
 
@@ -26,7 +29,7 @@ export default function MotoDocuments() {
   const [moto, setMoto] = useState<Moto | null>(null)
   const [docs, setDocs] = useState<MotoDocumento[]>([])
   const [loading, setLoading] = useState(true)
-  const [tipo, setTipo] = useState<DocTipo>('dut')
+  const [tipo, setTipo] = useState<DocTipo>('atpv')
   const [remover, setRemover] = useState<MotoDocumento | null>(null)
 
   const fetchDocs = useCallback(async () => {

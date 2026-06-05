@@ -23,5 +23,8 @@ set etapa = 'concluida',
     concluido_em = coalesce(concluido_em, updated_at)
 where baixa_concluida = true and etapa = 'nova';
 
+-- Renomeia o tipo de documento DUT → ATPV (documentos já enviados)
+update moto_documentos set tipo = 'atpv' where tipo = 'dut';
+
 -- Conferência
 select etapa, count(*) from moto_baixas group by etapa;

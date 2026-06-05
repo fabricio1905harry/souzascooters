@@ -110,7 +110,7 @@ export interface MotoFoto {
 }
 
 export type DocTipo =
-  | 'dut'
+  | 'atpv'
   | 'crlv'
   | 'laudo'
   | 'nf'
