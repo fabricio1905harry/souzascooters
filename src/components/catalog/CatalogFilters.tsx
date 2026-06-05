@@ -9,20 +9,9 @@ interface Props {
   onChange: (filters: Filters) => void
 }
 
-export default function CatalogFilters({ marcas, filters, onChange }: Props) {
-  const [busca, setBusca] = useState(filters.busca ?? '')
-  const [drawerOpen, setDrawerOpen] = useState(false)
-
-  // Busca por texto com debounce de 300ms
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if ((filters.busca ?? '') !== busca) onChange({ ...filters, busca: busca || undefined })
-    }, 300)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busca])
-
-  const filterFields = (
+/** Campos de filtro compartilhados entre a sidebar (desktop) e o drawer (mobile). */
+function FilterFields({ marcas, filters, onChange }: Props) {
+  return (
     <div className="space-y-4">
       <div>
         <label className="mb-1 block text-sm font-medium text-text">Marca</label>
@@ -99,23 +88,52 @@ export default function CatalogFilters({ marcas, filters, onChange }: Props) {
       </div>
 
       <button
-        onClick={() => {
-          setBusca('')
-          onChange({})
-        }}
+        onClick={() => onChange({})}
         className="w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted hover:bg-bg"
       >
         Limpar filtros
       </button>
     </div>
   )
+}
+
+/** Sidebar fixa de filtros — visível apenas em desktop (lg+), 260px. */
+export function CatalogSidebar(props: Props) {
+  return (
+    <aside className="sticky top-20 hidden w-[260px] shrink-0 lg:block">
+      <div className="rounded-xl border border-border bg-surface p-4">
+        <h2 className="mb-4 font-semibold text-text">Filtros</h2>
+        <FilterFields {...props} />
+      </div>
+    </aside>
+  )
+}
+
+/** Barra de busca (full-width) + botão "Filtros" que abre o drawer no mobile. */
+export function CatalogToolbar(props: Props) {
+  const { filters, onChange } = props
+  const [busca, setBusca] = useState(filters.busca ?? '')
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  // Sincroniza o input quando os filtros são limpos externamente (ex: "Limpar filtros")
+  useEffect(() => {
+    setBusca(filters.busca ?? '')
+  }, [filters.busca])
+
+  // Busca por texto com debounce de 300ms
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if ((filters.busca ?? '') !== busca) onChange({ ...filters, busca: busca || undefined })
+    }, 300)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busca])
 
   return (
     <>
-      {/* Busca + botão de filtros (mobile) */}
-      <div className="mb-4 flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+      <div className="mb-4 flex w-full gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
             type="text"
             placeholder="Buscar modelo..."
@@ -126,19 +144,11 @@ export default function CatalogFilters({ marcas, filters, onChange }: Props) {
         </div>
         <button
           onClick={() => setDrawerOpen(true)}
-          className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text lg:hidden"
+          className="flex shrink-0 items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text lg:hidden"
         >
           <SlidersHorizontal className="h-4 w-4" /> Filtros
         </button>
       </div>
-
-      {/* Sidebar desktop */}
-      <aside className="hidden lg:block">
-        <div className="sticky top-20 rounded-xl border border-border bg-surface p-4">
-          <h2 className="mb-4 font-semibold text-text">Filtros</h2>
-          {filterFields}
-        </div>
-      </aside>
 
       {/* Drawer mobile */}
       {drawerOpen && (
@@ -151,7 +161,7 @@ export default function CatalogFilters({ marcas, filters, onChange }: Props) {
                 <X className="h-5 w-5 text-muted" />
               </button>
             </div>
-            {filterFields}
+            <FilterFields {...props} />
             <button
               onClick={() => setDrawerOpen(false)}
               className="mt-4 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-dark"

@@ -4,7 +4,7 @@ import { useLoja } from '../../hooks/useLoja'
 import { useMarcas, useMotosPublicas } from '../../hooks/useMotos'
 import type { CatalogFilters as Filters } from '../../types'
 import PublicHeader from '../../components/layout/PublicHeader'
-import CatalogFilters from '../../components/catalog/CatalogFilters'
+import { CatalogSidebar, CatalogToolbar } from '../../components/catalog/CatalogFilters'
 import MotoCard from '../../components/catalog/MotoCard'
 import Spinner from '../../components/ui/Spinner'
 import WhatsAppFAB from '../../components/catalog/WhatsAppFAB'
@@ -31,13 +31,17 @@ export default function Catalog() {
     <div className="min-h-screen pb-24">
       <PublicHeader loja={loja} />
 
-      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:py-6">
         <h1 className="mb-4 text-xl font-bold text-text sm:text-2xl">Catálogo de motos</h1>
 
-        <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-6">
-          <CatalogFilters marcas={marcas} filters={filters} onChange={setFilters} />
+        {/* Desktop: sidebar 260px à esquerda + conteúdo flex-1 */}
+        <div className="lg:flex lg:items-start lg:gap-6">
+          <CatalogSidebar marcas={marcas} filters={filters} onChange={setFilters} />
 
-          <div>
+          <div className="min-w-0 flex-1">
+            {/* Busca full-width + botão Filtros (mobile) */}
+            <CatalogToolbar marcas={marcas} filters={filters} onChange={setFilters} />
+
             {loading ? (
               <Spinner />
             ) : visiveis.length === 0 ? (
@@ -51,7 +55,8 @@ export default function Catalog() {
                   {motos.length} moto{motos.length !== 1 && 's'} encontrada
                   {motos.length !== 1 && 's'}
                 </p>
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+                {/* 1 col mobile · 2 cols tablet · 3 cols desktop · 4 cols desktop largo */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {visiveis.map((moto) => (
                     <MotoCard key={moto.id} moto={moto} />
                   ))}
