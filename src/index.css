@@ -10,4 +10,39 @@
   body {
     @apply bg-bg text-text font-sans;
   }
+  ::selection {
+    @apply bg-primary text-white;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary/50 ring-offset-2 ring-offset-bg;
+  }
+}
+
+@layer components {
+  /* Campo de formulário padrão (inputs e selects) */
+  .field {
+    @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text
+      transition-colors placeholder:text-muted/60
+      focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+  }
+
+  /* Assinatura visual: listra de velocidade âmbar → azul */
+  .speed-stripe {
+    @apply h-1 w-16 -skew-x-12 rounded-sm;
+    background: linear-gradient(90deg, theme('colors.accent.DEFAULT'), theme('colors.primary.DEFAULT'));
+  }
+}
+
+/* Scrollbar discreta nas listas horizontais de thumbnails */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.border') transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
 }

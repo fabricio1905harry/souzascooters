@@ -28,3 +28,4 @@ update moto_documentos set tipo = 'atpv' where tipo = 'dut';
 
 -- Conferência
 select etapa, count(*) from moto_baixas group by etapa;
+11

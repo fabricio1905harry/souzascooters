@@ -51,7 +51,9 @@ export default function Stock() {
       if (statusFiltro && m.status !== statusFiltro) return false
       if (busca) {
         const termo = busca.toLowerCase()
-        return `${m.marca} ${m.modelo}`.toLowerCase().includes(termo)
+        const nome = `${m.marca} ${m.modelo}`.toLowerCase()
+        const placa = (m.placa ?? '').toLowerCase()
+        return nome.includes(termo) || placa.includes(termo)
       }
       return true
     })
@@ -80,7 +82,7 @@ export default function Stock() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-text">Estoque</h1>
+        <h1 className="font-display text-2xl font-bold uppercase text-text">Estoque</h1>
         <Link
           to="/admin/estoque/nova"
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
@@ -95,7 +97,7 @@ export default function Stock() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
             type="text"
-            placeholder="Buscar marca ou modelo..."
+            placeholder="Buscar por marca, modelo ou placa..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm"
@@ -117,11 +119,12 @@ export default function Stock() {
 
       {/* Tabela */}
       <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-        <table className="w-full min-w-[920px] text-sm">
+        <table className="w-full min-w-[1020px] text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
               <th className="p-3">Foto</th>
               <th className="p-3">Moto</th>
+              <th className="p-3 whitespace-nowrap">Placa</th>
               <th className="p-3 whitespace-nowrap">Ano</th>
               <th className="p-3 whitespace-nowrap">KM</th>
               <th className="p-3 whitespace-nowrap">Preço</th>
@@ -134,7 +137,7 @@ export default function Stock() {
           <tbody className="divide-y divide-border">
             {filtradas.length === 0 && (
               <tr>
-                <td colSpan={9} className="p-8 text-center text-muted">
+                <td colSpan={10} className="p-8 text-center text-muted">
                   Nenhuma moto encontrada.
                 </td>
               </tr>
@@ -165,6 +168,7 @@ export default function Stock() {
                     </span>
                   )}
                 </td>
+                <td className="whitespace-nowrap p-3 text-muted">{moto.placa || '—'}</td>
                 <td className="whitespace-nowrap p-3 text-muted">
                   {moto.ano_fab}/{moto.ano_mod}
                 </td>

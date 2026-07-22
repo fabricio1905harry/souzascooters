@@ -17,6 +17,8 @@ create table lojas (
   cidade text,
   uf char(2),
   cor_primaria text default '#1D9E75', -- hex da cor da loja
+  parcelas_cartao integer not null default 21,        -- máx. parcelas no cartão exibido no catálogo
+  parcelas_financiamento integer not null default 48, -- máx. parcelas de financiamento exibido no catálogo
   ativo boolean default true,
   created_at timestamptz default now()
 );

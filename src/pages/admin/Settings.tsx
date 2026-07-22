@@ -21,9 +21,12 @@ const settingsSchema = z.object({
   cidade: z.string().optional(),
   uf: z.string().max(2, 'Use a sigla (ex: SP)').optional(),
   cor_primaria: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use formato hex (#1D9E75)'),
+  parcelas_cartao: z.coerce.number().int().min(1, 'Mínimo 1x'),
+  parcelas_financiamento: z.coerce.number().int().min(1, 'Mínimo 1x'),
 })
 
-type SettingsForm = z.infer<typeof settingsSchema>
+type SettingsForm = z.output<typeof settingsSchema>
+type SettingsFormInput = z.input<typeof settingsSchema>
 
 export default function Settings() {
   const { loja, loading } = useLoja()
@@ -34,7 +37,9 @@ export default function Settings() {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<SettingsForm>({ resolver: zodResolver(settingsSchema) })
+  } = useForm<SettingsFormInput, unknown, SettingsForm>({
+    resolver: zodResolver(settingsSchema),
+  })
 
   useEffect(() => {
     if (loja) {
@@ -49,6 +54,8 @@ export default function Settings() {
         cidade: loja.cidade ?? '',
         uf: loja.uf ?? '',
         cor_primaria: loja.cor_primaria,
+        parcelas_cartao: loja.parcelas_cartao,
+        parcelas_financiamento: loja.parcelas_financiamento,
       })
     }
   }, [loja, reset])
@@ -69,6 +76,8 @@ export default function Settings() {
         cidade: values.cidade || null,
         uf: values.uf || null,
         cor_primaria: values.cor_primaria,
+        parcelas_cartao: values.parcelas_cartao,
+        parcelas_financiamento: values.parcelas_financiamento,
       })
       .eq('id', loja.id)
     setSalvando(false)
@@ -85,7 +94,7 @@ export default function Settings() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-6 text-2xl font-bold text-text">Configurações da loja</h1>
+      <h1 className="mb-6 font-display text-2xl font-bold uppercase text-text">Configurações da loja</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <section className="rounded-xl border border-border bg-surface p-5">
@@ -107,6 +116,32 @@ export default function Settings() {
               </div>
               {errors.cor_primaria && (
                 <p className="mt-1 text-xs text-red-600">{errors.cor_primaria.message}</p>
+              )}
+            </div>
+            <div>
+              <label className={labelClass}>Máx. parcelas no cartão</label>
+              <input
+                type="number"
+                min={1}
+                {...register('parcelas_cartao')}
+                className={inputClass}
+                placeholder="21"
+              />
+              {errors.parcelas_cartao && (
+                <p className="mt-1 text-xs text-red-600">{errors.parcelas_cartao.message}</p>
+              )}
+            </div>
+            <div>
+              <label className={labelClass}>Máx. parcelas no financiamento</label>
+              <input
+                type="number"
+                min={1}
+                {...register('parcelas_financiamento')}
+                className={inputClass}
+                placeholder="48"
+              />
+              {errors.parcelas_financiamento && (
+                <p className="mt-1 text-xs text-red-600">{errors.parcelas_financiamento.message}</p>
               )}
             </div>
           </div>

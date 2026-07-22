@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { FileText, Paperclip, Trash2, X } from 'lucide-react'
+import { FileText, Info, Paperclip, Trash2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useLoja } from '../../hooks/useLoja'
 import { useUpload } from '../../hooks/useUpload'
-import { DOC_TIPOS } from '../../lib/helpers'
+import { DOC_TIPOS, formatPreco } from '../../lib/helpers'
 import type { DocTipo, Moto } from '../../types'
 
 const vendaSchema = z.object({
@@ -191,8 +191,27 @@ export default function VenderModal({ moto, onClose, onSold }: Props) {
                 <input type="date" {...register('data_venda')} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>Valor da venda (R$)</label>
-                <input type="number" step="0.01" {...register('valor_venda')} className={inputClass} />
+                <label className={labelClass}>Valor do anúncio (R$)</label>
+                <input
+                  type="text"
+                  disabled
+                  readOnly
+                  value={formatPreco(moto.preco)}
+                  className={`${inputClass} cursor-not-allowed bg-bg text-muted`}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Valor real da venda (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  {...register('valor_venda')}
+                  className={inputClass}
+                />
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+                  <Info className="h-3.5 w-3.5 shrink-0" /> Este é o valor efetivamente pago pelo
+                  comprador — pode ser diferente do valor anunciado.
+                </p>
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass}>Observações para o despachante</label>

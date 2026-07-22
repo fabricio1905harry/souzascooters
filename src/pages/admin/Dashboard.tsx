@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -11,11 +11,13 @@ import {
   Play,
   Timer,
   Users,
+  Wrench,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { ETAPA_BADGE_CLASSES, ETAPA_LABELS, formatData, formatPreco } from '../../lib/helpers'
-import type { Lead, Moto, MotoBaixa } from '../../types'
+import type { Lead, Moto, MotoBaixa, MotoStatus } from '../../types'
 import Spinner from '../../components/ui/Spinner'
+import { HorizontalBarChart, MonthlyBarChart } from '../../components/admin/DashboardCharts'
 
 type BaixaComMoto = MotoBaixa & {
   moto: Pick<Moto, 'marca' | 'modelo' | 'created_at'> | null
@@ -69,10 +71,27 @@ function KPICard({
   )
 }
 
+const MESES_GRAFICO = 6
+
+/** Últimos N meses no formato "jan", "fev"... terminando no mês atual. */
+function ultimosMeses(n: number): { chave: string; label: string }[] {
+  const out: { chave: string; label: string }[] = []
+  const hoje = new Date()
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)
+    out.push({
+      chave: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      label: d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''),
+    })
+  }
+  return out
+}
+
 export default function Dashboard() {
   const [motos, setMotos] = useState<Moto[]>([])
   const [baixas, setBaixas] = useState<BaixaComMoto[]>([])
   const [leads, setLeads] = useState<LeadComMoto[]>([])
+  const [leadsTipos, setLeadsTipos] = useState<Lead['tipo'][]>([])
   const [leadsSemana, setLeadsSemana] = useState(0)
   const [loading, setLoading] = useState(true)
 
@@ -80,7 +99,7 @@ export default function Dashboard() {
     async function fetchData() {
       const seteDiasAtras = new Date(Date.now() - 7 * 86_400_000).toISOString()
 
-      const [motosRes, baixasRes, leadsRes, leadsCount] = await Promise.all([
+      const [motosRes, baixasRes, leadsRes, leadsCount, leadsTiposRes] = await Promise.all([
         supabase.from('motos').select('*'),
         supabase.from('moto_baixas').select('*, moto:motos(marca, modelo, created_at)'),
         supabase
@@ -92,17 +111,94 @@ export default function Dashboard() {
           .from('leads')
           .select('id', { count: 'exact', head: true })
           .gt('created_at', seteDiasAtras),
+        supabase.from('leads').select('tipo'),
       ])
 
       setMotos((motosRes.data as Moto[]) ?? [])
       setBaixas((baixasRes.data as BaixaComMoto[]) ?? [])
       setLeads((leadsRes.data as LeadComMoto[]) ?? [])
       setLeadsSemana(leadsCount.count ?? 0)
+      setLeadsTipos(((leadsTiposRes.data as { tipo: Lead['tipo'] }[]) ?? []).map((l) => l.tipo))
       setLoading(false)
     }
 
     fetchData()
   }, [])
+
+  // ----- Séries mensais: vendas (contagem) e faturamento (soma do valor real de venda) -----
+  const meses = useMemo(() => ultimosMeses(MESES_GRAFICO), [])
+
+  const vendasPorMes = useMemo(() => {
+    const porChave = new Map<string, number>()
+    for (const b of baixas) {
+      if (!b.data_venda) continue
+      const chave = b.data_venda.slice(0, 7)
+      porChave.set(chave, (porChave.get(chave) ?? 0) + 1)
+    }
+    return meses.map((m) => ({ label: m.label, value: porChave.get(m.chave) ?? 0 }))
+  }, [baixas, meses])
+
+  const faturamentoPorMes = useMemo(() => {
+    const porChave = new Map<string, number>()
+    for (const b of baixas) {
+      if (!b.data_venda || b.valor_venda == null) continue
+      const chave = b.data_venda.slice(0, 7)
+      porChave.set(chave, (porChave.get(chave) ?? 0) + b.valor_venda)
+    }
+    return meses.map((m) => ({ label: m.label, value: porChave.get(m.chave) ?? 0 }))
+  }, [baixas, meses])
+
+  // ----- Motos por status -----
+  const STATUS_ORDEM: MotoStatus[] = ['disponivel', 'reservado', 'manutencao', 'vendido']
+  const STATUS_ICONS: Record<MotoStatus, React.ReactNode> = {
+    disponivel: <CheckCircle2 className="h-3.5 w-3.5" />,
+    reservado: <CalendarClock className="h-3.5 w-3.5" />,
+    manutencao: <Wrench className="h-3.5 w-3.5" />,
+    vendido: <Bike className="h-3.5 w-3.5" />,
+  }
+  const STATUS_CHART_LABELS: Record<MotoStatus, string> = {
+    disponivel: 'Disponível',
+    reservado: 'Reservado',
+    manutencao: 'Manutenção',
+    vendido: 'Vendido',
+  }
+  const STATUS_CHART_CORES: Record<MotoStatus, string> = {
+    disponivel: '#10B981',
+    reservado: '#F59E0B',
+    manutencao: '#6B7280',
+    vendido: '#EF4444',
+  }
+  const motosPorStatus = useMemo(() => {
+    const contagem: Record<MotoStatus, number> = {
+      disponivel: 0,
+      reservado: 0,
+      manutencao: 0,
+      vendido: 0,
+    }
+    for (const m of motos) contagem[m.status]++
+    return STATUS_ORDEM.map((s) => ({
+      label: STATUS_CHART_LABELS[s],
+      value: contagem[s],
+      color: STATUS_CHART_CORES[s],
+      icon: STATUS_ICONS[s],
+    }))
+  }, [motos])
+
+  // ----- Leads por tipo -----
+  const LEAD_TIPO_CORES: Record<Lead['tipo'], string> = {
+    interesse: '#4D5F9C',
+    financiamento: '#C88A0E',
+    test_drive: '#1B8A5A',
+  }
+  const leadsPorTipo = useMemo(() => {
+    const contagem: Record<Lead['tipo'], number> = { interesse: 0, test_drive: 0, financiamento: 0 }
+    for (const t of leadsTipos) contagem[t]++
+    return (Object.keys(contagem) as Lead['tipo'][]).map((t) => ({
+      label: LEAD_TIPO_LABELS[t],
+      value: contagem[t],
+      color: LEAD_TIPO_CORES[t],
+    }))
+  }, [leadsTipos])
 
   if (loading) return <Spinner />
 
@@ -136,7 +232,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-text">Dashboard</h1>
+      <h1 className="mb-6 font-display text-2xl font-bold uppercase text-text">Dashboard</h1>
 
       {/* KPIs do estoque */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -159,6 +255,29 @@ export default function Dashboard() {
           valor={tempoMedioVenda !== null ? `${tempoMedioVenda}d` : '—'}
           icon={Timer}
         />
+      </div>
+
+      {/* Gráficos */}
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <MonthlyBarChart
+          title="Vendas por mês"
+          subtitle={`Motos vendidas nos últimos ${MESES_GRAFICO} meses`}
+          data={vendasPorMes}
+          color="#4D5F9C"
+        />
+        <MonthlyBarChart
+          title="Faturamento por mês"
+          subtitle="Soma do valor real de venda"
+          data={faturamentoPorMes}
+          color="#C88A0E"
+          valueFormatter={formatPreco}
+        />
+        <HorizontalBarChart
+          title="Motos por status"
+          subtitle="Distribuição atual do estoque"
+          data={motosPorStatus}
+        />
+        <HorizontalBarChart title="Leads por tipo" subtitle="Total histórico" data={leadsPorTipo} />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">

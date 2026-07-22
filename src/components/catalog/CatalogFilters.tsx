@@ -14,11 +14,13 @@ function FilterFields({ marcas, filters, onChange }: Props) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="mb-1 block text-sm font-medium text-text">Marca</label>
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted">
+          Marca
+        </label>
         <select
           value={filters.marca ?? ''}
           onChange={(e) => onChange({ ...filters, marca: e.target.value || undefined })}
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+          className="field"
         >
           <option value="">Todas</option>
           {marcas.map((m) => (
@@ -30,13 +32,15 @@ function FilterFields({ marcas, filters, onChange }: Props) {
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-text">Categoria</label>
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted">
+          Categoria
+        </label>
         <select
           value={filters.categoria ?? ''}
           onChange={(e) =>
             onChange({ ...filters, categoria: (e.target.value || undefined) as MotoCategoria | undefined })
           }
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+          className="field"
         >
           <option value="">Todas</option>
           {CATEGORIAS.map((c) => (
@@ -48,7 +52,9 @@ function FilterFields({ marcas, filters, onChange }: Props) {
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-text">Preço</label>
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted">
+          Preço
+        </label>
         <div className="flex gap-2">
           <input
             type="number"
@@ -57,7 +63,7 @@ function FilterFields({ marcas, filters, onChange }: Props) {
             onChange={(e) =>
               onChange({ ...filters, precoMin: e.target.value ? Number(e.target.value) : undefined })
             }
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+            className="field"
           />
           <input
             type="number"
@@ -66,19 +72,21 @@ function FilterFields({ marcas, filters, onChange }: Props) {
             onChange={(e) =>
               onChange({ ...filters, precoMax: e.target.value ? Number(e.target.value) : undefined })
             }
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+            className="field"
           />
         </div>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-text">Ordenar por</label>
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted">
+          Ordenar por
+        </label>
         <select
           value={filters.ordenacao ?? 'recentes'}
           onChange={(e) =>
             onChange({ ...filters, ordenacao: e.target.value as Filters['ordenacao'] })
           }
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+          className="field"
         >
           <option value="recentes">Mais recentes</option>
           <option value="menor_preco">Menor preço</option>
@@ -89,7 +97,7 @@ function FilterFields({ marcas, filters, onChange }: Props) {
 
       <button
         onClick={() => onChange({})}
-        className="w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted hover:bg-bg"
+        className="w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted transition-colors hover:border-ink/30 hover:bg-bg hover:text-text"
       >
         Limpar filtros
       </button>
@@ -101,8 +109,13 @@ function FilterFields({ marcas, filters, onChange }: Props) {
 export function CatalogSidebar(props: Props) {
   return (
     <aside className="sticky top-20 hidden w-[260px] shrink-0 lg:block">
-      <div className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-4 font-semibold text-text">Filtros</h2>
+      <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+        <div className="mb-4 flex items-center gap-2">
+          <SlidersHorizontal className="h-4 w-4 text-primary" />
+          <h2 className="font-display text-lg font-semibold uppercase tracking-wider text-text">
+            Filtros
+          </h2>
+        </div>
         <FilterFields {...props} />
       </div>
     </aside>
@@ -139,32 +152,39 @@ export function CatalogToolbar(props: Props) {
             placeholder="Buscar modelo..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm"
+            className="field py-2.5 pl-9"
           />
         </div>
         <button
           onClick={() => setDrawerOpen(true)}
-          className="flex shrink-0 items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text lg:hidden"
+          className="flex shrink-0 items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-sm font-semibold text-text transition-colors hover:border-primary lg:hidden"
         >
-          <SlidersHorizontal className="h-4 w-4" /> Filtros
+          <SlidersHorizontal className="h-4 w-4 text-primary" /> Filtros
         </button>
       </div>
 
       {/* Drawer mobile */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} />
-          <div className="absolute bottom-0 left-0 right-0 max-h-[80vh] overflow-y-auto rounded-t-2xl bg-surface p-5">
+          <div className="absolute inset-0 bg-ink/60 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
+          <div className="absolute bottom-0 left-0 right-0 max-h-[80vh] animate-fade-up overflow-y-auto rounded-t-3xl bg-surface p-5 pb-8">
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" />
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-semibold text-text">Filtros</h2>
-              <button onClick={() => setDrawerOpen(false)}>
-                <X className="h-5 w-5 text-muted" />
+              <h2 className="font-display text-xl font-semibold uppercase tracking-wider text-text">
+                Filtros
+              </h2>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                aria-label="Fechar filtros"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-bg text-muted"
+              >
+                <X className="h-5 w-5" />
               </button>
             </div>
             <FilterFields {...props} />
             <button
               onClick={() => setDrawerOpen(false)}
-              className="mt-4 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-dark"
+              className="mt-4 w-full rounded-xl bg-primary px-4 py-3 font-display text-base font-semibold uppercase tracking-wider text-white transition-colors hover:bg-primary-dark"
             >
               Aplicar
             </button>

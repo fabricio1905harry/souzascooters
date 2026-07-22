@@ -4,7 +4,7 @@ import { AtSign, Bike, MapPin } from 'lucide-react'
 import { supabase, getPhotoUrl, getThumbnailUrl } from '../../lib/supabase'
 import { useLoja } from '../../hooks/useLoja'
 import { registrarClick } from '../../lib/leads'
-import { formatPreco } from '../../lib/helpers'
+import { buildMotoSlug, formatPreco } from '../../lib/helpers'
 import type { LojaLink, Moto } from '../../types'
 import LucideIcon from '../../components/ui/LucideIcon'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -21,7 +21,7 @@ function LinkButton({ link, lojaId }: { link: LojaLink; lojaId: string }) {
   return (
     <button
       onClick={handleClick}
-      className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-5 py-4 text-left font-medium text-text shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-md"
+      className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-5 py-4 text-left font-semibold text-text shadow-card transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-lift"
     >
       <LucideIcon name={link.icone} className="h-5 w-5 shrink-0 text-primary" />
       <span className="flex-1 text-center">{link.titulo}</span>
@@ -30,14 +30,24 @@ function LinkButton({ link, lojaId }: { link: LojaLink; lojaId: string }) {
   )
 }
 
-function MotoDestaqueCard({ moto, lojaId }: { moto: Moto; lojaId: string }) {
+const PARCELAS_FINANCIAMENTO_PADRAO = 48
+
+function MotoDestaqueCard({
+  moto,
+  lojaId,
+  parcelasFinanciamento = PARCELAS_FINANCIAMENTO_PADRAO,
+}: {
+  moto: Moto
+  lojaId: string
+  parcelasFinanciamento?: number
+}) {
   const foto = moto.fotos?.[0]
 
   return (
     <Link
-      to={`/moto/${moto.id}`}
+      to={`/moto/${buildMotoSlug(moto)}`}
       onClick={() => registrarClick({ loja_id: lojaId, moto_id: moto.id, tipo: 'moto_detalhe' })}
-      className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+      className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-card transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lift"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary-light via-bg to-bg">
         {foto ? (
@@ -57,18 +67,18 @@ function MotoDestaqueCard({ moto, lojaId }: { moto: Moto; lojaId: string }) {
         </div>
       </div>
       <div className="p-3">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">
-          {moto.marca}
-        </p>
-        <h3 className="truncate text-sm font-bold text-text">{moto.modelo}</h3>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">{moto.marca}</p>
+        <h3 className="truncate font-display text-lg font-semibold uppercase leading-tight text-text">
+          {moto.modelo}
+        </h3>
         <p className="text-xs text-muted">
           {moto.ano_fab}/{moto.ano_mod}
           {moto.quilometragem != null && ` · ${moto.quilometragem.toLocaleString('pt-BR')} km`}
         </p>
-        <p className="mt-1.5 text-base font-extrabold text-primary-dark">
+        <p className="mt-1.5 font-display text-xl font-bold leading-none text-primary-dark">
           {formatPreco(moto.preco)}
         </p>
-        <p className="text-[10px] text-muted">até 48x no financiamento</p>
+        <p className="mt-0.5 text-[10px] text-muted">até {parcelasFinanciamento}x no financiamento</p>
       </div>
     </Link>
   )
@@ -95,6 +105,7 @@ export default function LinkPage() {
       .select('*, fotos:moto_fotos(id, moto_id, storage_path, ordem)')
       .eq('loja_id', loja.id)
       .eq('destaque', true)
+      .order('status', { ascending: true }) // disponíveis primeiro
       .limit(6)
       .then(({ data }) => {
         if (data) {
@@ -123,7 +134,7 @@ export default function LinkPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen bg-[linear-gradient(180deg,rgba(77,95,156,0.08),transparent_320px)] pb-24">
       <div className="mx-auto max-w-lg px-4">
         {/* Capa — mesma largura dos botões, centralizada */}
         {loja.capa_url && (
@@ -149,7 +160,10 @@ export default function LinkPage() {
               <Bike className="h-12 w-12 text-primary" />
             </div>
           )}
-          <h1 className="mt-4 text-2xl font-bold text-text">{loja.nome}</h1>
+          <h1 className="mt-4 font-display text-2xl font-bold uppercase text-text">
+            {loja.nome}
+          </h1>
+          <div className="speed-stripe mt-2" />
           {loja.slogan && <p className="mt-1 text-muted">{loja.slogan}</p>}
           {(loja.cidade || loja.uf) && (
             <p className="mt-1 flex items-center gap-1 text-sm text-muted">
@@ -175,10 +189,12 @@ export default function LinkPage() {
           <Link
             to="/catalogo"
             onClick={() => registrarClick({ loja_id: loja.id, tipo: 'catalogo' })}
-            className="flex w-full items-center gap-3 rounded-xl bg-primary px-5 py-4 font-medium text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-md"
+            className="flex w-full items-center gap-3 rounded-xl bg-primary px-5 py-4 text-white shadow-card transition-all hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-glow"
           >
             <Bike className="h-5 w-5 shrink-0" />
-            <span className="flex-1 text-center">Ver catálogo de motos</span>
+            <span className="flex-1 text-center font-display text-lg font-semibold uppercase tracking-wider">
+              Ver catálogo de motos
+            </span>
             <span className="w-5" />
           </Link>
           {links.map((link) => (
@@ -189,10 +205,17 @@ export default function LinkPage() {
         {/* Motos em destaque */}
         {destaques.length > 0 && (
           <section className="mt-10">
-            <h2 className="mb-4 text-center text-lg font-semibold text-text">Motos em destaque</h2>
+            <h2 className="mb-4 text-center font-display text-2xl font-semibold uppercase tracking-wider text-text">
+              Motos em destaque
+            </h2>
             <div className="grid grid-cols-2 gap-3">
               {destaques.map((moto) => (
-                <MotoDestaqueCard key={moto.id} moto={moto} lojaId={loja.id} />
+                <MotoDestaqueCard
+                  key={moto.id}
+                  moto={moto}
+                  lojaId={loja.id}
+                  parcelasFinanciamento={loja.parcelas_financiamento}
+                />
               ))}
             </div>
           </section>

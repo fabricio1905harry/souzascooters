@@ -13,6 +13,8 @@ export interface Loja {
   cidade: string | null
   uf: string | null
   cor_primaria: string
+  parcelas_cartao: number
+  parcelas_financiamento: number
   ativo: boolean
   google_rating: number | null
   google_review_count: number | null

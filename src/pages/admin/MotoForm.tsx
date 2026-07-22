@@ -220,7 +220,7 @@ export default function MotoForm() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold text-text">
+      <h1 className="mb-6 font-display text-2xl font-bold uppercase text-text">
         {editando ? 'Editar moto' : 'Nova moto'}
       </h1>
 
@@ -299,7 +299,7 @@ export default function MotoForm() {
           <h2 className="mb-4 font-semibold text-text">Venda</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className={labelClass}>Preço (R$) *</label>
+              <label className={labelClass}>Valor do anúncio (R$) *</label>
               <input type="number" step="0.01" {...register('preco')} className={inputClass} />
               {errors.preco && <p className="mt-1 text-xs text-red-600">{errors.preco.message}</p>}
             </div>

@@ -31,6 +31,11 @@ export function useMotosPublicas(lojaId: string | undefined, filters: CatalogFil
       if (filters.precoMax) query = query.lte('preco', filters.precoMax)
       if (filters.busca) query = query.ilike('modelo', `%${filters.busca}%`)
 
+      // Disponíveis sempre primeiro; reservadas vão para o fim da fila.
+      // (a view motos_publicas só contém 'disponivel' e 'reservado' —
+      // vendidas/manutenção nunca aparecem no catálogo)
+      query = query.order('status', { ascending: true })
+
       const ord = ordenacaoMap[filters.ordenacao ?? 'recentes']
       query = query.order(ord.column, { ascending: ord.ascending })
 

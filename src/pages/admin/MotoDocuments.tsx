@@ -101,7 +101,7 @@ export default function MotoDocuments() {
         <ArrowLeft className="h-4 w-4" /> Voltar ao estoque
       </Link>
 
-      <h1 className="text-2xl font-bold text-text">
+      <h1 className="font-display text-2xl font-bold uppercase text-text">
         Documentos — {moto ? `${moto.marca} ${moto.modelo}` : 'Moto'}
       </h1>
       {moto && (

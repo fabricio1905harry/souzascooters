@@ -31,9 +31,20 @@ export default function Catalog() {
     <div className="min-h-screen pb-24">
       <PublicHeader loja={loja} />
 
-      <div className="mx-auto max-w-7xl px-4 py-4 sm:py-6">
-        <h1 className="mb-4 text-xl font-bold text-text sm:text-2xl">Catálogo de motos</h1>
+      {/* Faixa hero — asfalto */}
+      <section className="bg-ink bg-[radial-gradient(ellipse_at_top_right,rgba(77,95,156,0.35),transparent_55%)]">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:py-12">
+          <div className="speed-stripe mb-4" />
+          <h1 className="font-display text-3xl font-bold uppercase text-white sm:text-4xl">
+            Catálogo de motos
+          </h1>
+          <p className="mt-2 text-sm text-white/60 sm:text-base">
+            Compra · Venda · Troca · Financiamento em até {loja?.parcelas_financiamento ?? 48}x
+          </p>
+        </div>
+      </section>
 
+      <div className="mx-auto max-w-7xl px-4 py-6">
         {/* Desktop: sidebar 260px à esquerda + conteúdo flex-1 */}
         <div className="lg:flex lg:items-start lg:gap-6">
           <CatalogSidebar marcas={marcas} filters={filters} onChange={setFilters} />
@@ -51,21 +62,21 @@ export default function Catalog() {
               </div>
             ) : (
               <>
-                <p className="mb-3 text-sm text-muted">
+                <p className="mb-3 text-sm font-medium text-muted">
                   {motos.length} moto{motos.length !== 1 && 's'} encontrada
                   {motos.length !== 1 && 's'}
                 </p>
                 {/* 1 col mobile · 2 cols tablet · 3 cols desktop · 4 cols desktop largo */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {visiveis.map((moto) => (
-                    <MotoCard key={moto.id} moto={moto} />
+                    <MotoCard key={moto.id} moto={moto} loja={loja} />
                   ))}
                 </div>
                 {temMais && (
-                  <div className="mt-6 text-center">
+                  <div className="mt-8 text-center">
                     <button
                       onClick={() => setPage((p) => p + 1)}
-                      className="rounded-lg border border-border bg-surface px-6 py-2.5 text-sm font-medium text-text hover:bg-bg"
+                      className="rounded-lg border border-ink/20 bg-surface px-8 py-3 font-display text-base font-semibold uppercase tracking-wider text-ink transition-colors hover:bg-ink hover:text-white"
                     >
                       Carregar mais
                     </button>

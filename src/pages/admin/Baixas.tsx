@@ -442,7 +442,7 @@ export default function Baixas() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text">Baixas de veículos</h1>
+        <h1 className="font-display text-2xl font-bold uppercase text-text">Baixas de veículos</h1>
         <p className="text-sm text-muted">
           {motos.length} vendida{motos.length !== 1 && 's'} · {pendentes + semBaixa} pendente
           {pendentes + semBaixa !== 1 && 's'} de conclusão

@@ -24,13 +24,24 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Toaster position="top-right" />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: '#151823',
+              color: '#fff',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: 500,
+            },
+          }}
+        />
         <Suspense fallback={<Spinner className="min-h-screen" />}>
           <Routes>
             {/* Rotas públicas */}
             <Route path="/" element={<LinkPage />} />
             <Route path="/catalogo" element={<Catalog />} />
-            <Route path="/moto/:id" element={<MotoDetail />} />
+            <Route path="/moto/:slug" element={<MotoDetail />} />
 
             {/* Auth */}
             <Route path="/admin/login" element={<Login />} />
